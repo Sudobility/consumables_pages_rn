@@ -35,3 +35,13 @@ export type {
 export type { RevenueCatCreditStoreProps } from './RevenueCatCreditStore';
 
 export type { ConsumableSource } from '@sudobility/types';
+
+// React Native RevenueCat adapter (implements consumables_client's ConsumablesAdapter).
+// Inject via initializeConsumables({ adapter: createConsumablesRNAdapter() }).
+export {
+  configureConsumablesRNAdapter,
+  createConsumablesRNAdapter,
+  setConsumablesRNUser,
+  clearConsumablesRNUser,
+  hasConsumablesRNUser,
+} from './adapters';
