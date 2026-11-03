@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/consumables_pages_rn",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "React Native UI components for consumable credits (credit store, purchase history, usage history)",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -28,7 +28,7 @@
     "react-native": ">=0.74",
     "react-native-purchases": ">=7.0.0",
     "@sudobility/consumables_client": "^0.0.40",
-    "@sudobility/design": "^1.1.68",
+    "@sudobility/design": "^1.1.69",
     "@sudobility/types": "^1.9.78"
   },
   "peerDependenciesMeta": {
@@ -39,7 +39,7 @@
   "devDependencies": {
     "@eslint/js": "~10.0.1",
     "@sudobility/consumables_client": "^0.0.40",
-    "@sudobility/design": "^1.1.68",
+    "@sudobility/design": "^1.1.69",
     "@sudobility/types": "^1.9.78",
     "@types/react": "~19.3.0",
     "@typescript-eslint/eslint-plugin": "~8.72.0",
