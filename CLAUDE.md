@@ -50,6 +50,12 @@ two packages are expected to stay in lockstep on their public surface.
   `src/__tests__/test-utils.tsx`, not `@testing-library/react-native`.
 - `src/__tests__` is excluded from `tsconfig*.json` (it imports `vitest`), so it
   is neither typechecked by `tsc` nor emitted to `dist`.
+- No `test` script exists — use `bun run test:unit`. `bun run build` runs `tsc`
+  then `scripts/fix-esm-imports.mjs`, which appends `.js` to relative imports so
+  the emitted ESM resolves (`"type": "module"`). Don't hand-edit `dist`.
+- `@sudobility/*` deps resolve from **GitHub Packages**, not public npm (see
+  `.npmrc` / `publishConfig`); CI publishes there. `react-native-purchases` is an
+  optional peer, needed only by `RevenueCatCreditStore` and the RN adapter.
 
 ## Screen rendering — safe area & scroll insets
 
