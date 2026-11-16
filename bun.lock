@@ -6,9 +6,9 @@
       "name": "@sudobility/consumables_pages_rn",
       "devDependencies": {
         "@eslint/js": "~10.0.1",
-        "@sudobility/consumables_client": "^0.0.44",
+        "@sudobility/consumables_client": "^0.0.45",
         "@sudobility/design": "^1.1.72",
-        "@sudobility/types": "^1.11.1",
+        "@sudobility/types": "^1.11.2",
         "@types/react": "~19.3.0",
         "@typescript-eslint/eslint-plugin": "~8.72.0",
         "@typescript-eslint/parser": "~8.72.0",
@@ -28,9 +28,9 @@
         "vitest": "~4.1.12",
       },
       "peerDependencies": {
-        "@sudobility/consumables_client": "^0.0.44",
+        "@sudobility/consumables_client": "^0.0.45",
         "@sudobility/design": "^1.1.72",
-        "@sudobility/types": "^1.11.1",
+        "@sudobility/types": "^1.11.2",
         "react": ">=18",
         "react-native": ">=0.74",
         "react-native-purchases": ">=7.0.0",
@@ -359,11 +359,11 @@
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
-    "@sudobility/consumables_client": ["@sudobility/consumables_client@0.0.44", "https://npm.pkg.github.com/download/@sudobility/consumables_client/0.0.44/f4c3f1c1f07774bb9d945f361309e25d8e993013", { "peerDependencies": { "@sudobility/types": "^1.11.1", "react": "^18.0.0 || ^19.0.0" } }, "sha512-nc5Hq++fHIhsoE/hM2cUPy/368RSfITorre7yn+CWb4iBx8ehQ3tykiPZh9g7GHZUTaB3RNy/tKF7TY+1ESHVg=="],
+    "@sudobility/consumables_client": ["@sudobility/consumables_client@0.0.45", "https://npm.pkg.github.com/download/@sudobility/consumables_client/0.0.45/6ceadb57c01b1bb04fe63889e2d9667ff6376cf3", { "peerDependencies": { "@sudobility/types": "^1.11.2", "react": "^18.0.0 || ^19.0.0" } }, "sha512-Jz0Jh3eb7UpBi365XxOMmJ7y2NOWNgToc5RYqUYKA4CxOUtWxqvVOh9nnsQvgsCi/4HwSvkha0uVaMG7aBRXuQ=="],
 
     "@sudobility/design": ["@sudobility/design@1.1.72", "https://npm.pkg.github.com/download/@sudobility/design/1.1.72/ee29355781de03bb2e14986a51b75f8aaba4cd1b", { "peerDependencies": { "clsx": ">=2.0.0", "tailwind-merge": ">=2.0.0" } }, "sha512-gYRtMzHvVTZqLO3j0R9HLA8+gHnSl2GZ+swbPTL1+itfPIpBt0dr+k5AkaLFYar1pbL5XG+GpPtm/9oguSPj+A=="],
 
-    "@sudobility/types": ["@sudobility/types@1.11.1", "https://npm.pkg.github.com/download/@sudobility/types/1.11.1/dc6bf578b6f618fab74a7a60ed064d80b18782c2", {}, "sha512-NPECPlRPj1IavT7pu3KtIFB6rDfs30AgD89pw/qrNe1+Tm0FFLkIfqxE/y8+uajm85um+FcoYHn/hY70Px9uow=="],
+    "@sudobility/types": ["@sudobility/types@1.11.2", "https://npm.pkg.github.com/download/@sudobility/types/1.11.2/d6d0b1809eaca31ef737646032cc431111b58a49", {}, "sha512-gg+bPtcOGNETDt9oNdjcn7R22EfFWmRxMOhj0ADwulBJ9tJ4NaMaXkrTtkWF+figSDZqmD9a9kodgOHseq8gsQ=="],
 
     "@types/babel__core": ["@types/babel__core@7.20.5", "", { "dependencies": { "@babel/parser": "^7.20.7", "@babel/types": "^7.20.7", "@types/babel__generator": "*", "@types/babel__template": "*", "@types/babel__traverse": "*" } }, "sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA=="],
 
