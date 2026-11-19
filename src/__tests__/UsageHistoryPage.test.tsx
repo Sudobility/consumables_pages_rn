@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { __setWindowWidth } from 'react-native';
 import { UsageHistoryPage } from '../UsageHistoryPage';
 import type { UsageHistoryPageProps } from '../types';
 import { render, firePress } from './test-utils';
@@ -149,5 +150,95 @@ describe('UsageHistoryPage: credits and reference', () => {
       />
     );
     expect(getAllByText('1').length).toBeGreaterThan(0);
+  });
+});
+
+describe('UsageHistoryPage: cards on a narrow window', () => {
+  // The web's `sm:hidden` cards: what a phone gets.
+  it('prints no column headers', async () => {
+    const { queryByText } = await render(
+      <UsageHistoryPage {...base({ usages })} />
+    );
+    expect(queryByText('Date')).toBeNull();
+    expect(queryByText('File')).toBeNull();
+  });
+
+  it('labels the credits a card shows', async () => {
+    const { container } = await render(
+      <UsageHistoryPage
+        {...base({
+          usages: [
+            { id: 1, credits: 4, filename: 'logo.svg', created_at: 'd' },
+          ] as unknown as UsageHistoryPageProps['usages'],
+          labels: { ...defaultLabels, columnCredits: 'Credits' },
+        })}
+      />
+    );
+    expect(container.textContent).toBe('Usage Historydlogo.svgCredits: 4');
+  });
+});
+
+describe('UsageHistoryPage: table from the sm breakpoint', () => {
+  // The web's `hidden sm:block` table: what a tablet or a desktop window gets.
+  async function renderWide(overrides: Partial<UsageHistoryPageProps> = {}) {
+    __setWindowWidth(640);
+    const result = await render(
+      <UsageHistoryPage {...base({ usages, ...overrides })} />
+    );
+    const cells = (row: Element) =>
+      Array.from(row.children).map(cell => cell.textContent);
+    return {
+      ...result,
+      header: () =>
+        cells(result.container.querySelector('.border-border') as HTMLElement),
+      rows: () =>
+        Array.from(
+          result.container.querySelectorAll('.border-border\\/50')
+        ).map(cells),
+    };
+  }
+
+  it('heads the columns date and filename', async () => {
+    const { header } = await renderWide();
+    expect(header()).toEqual(['Date', 'File']);
+  });
+
+  it('prints each usage once, as a row', async () => {
+    const { rows, getAllByText } = await renderWide();
+    expect(getAllByText('logo.svg')).toHaveLength(1);
+    expect(rows()[0]).toEqual(['2025-01-15', 'logo.svg']);
+  });
+
+  it('should show dash for null filenames', async () => {
+    const { rows } = await renderWide();
+    expect(rows()[1]).toEqual(['2025-01-14', '-']);
+  });
+
+  it('shows a credits column only when its label is given', async () => {
+    const one = [
+      { id: 1, credits: 4, reference: 'x', filename: null, created_at: 'd' },
+    ] as unknown as UsageHistoryPageProps['usages'];
+
+    const without = await renderWide({ usages: one });
+    expect(without.header()).toEqual(['Date', 'File']);
+    expect(without.rows()).toEqual([['d', 'x']]);
+    without.unmount();
+
+    const withColumn = await renderWide({
+      usages: one,
+      labels: { ...defaultLabels, columnCredits: 'Credits' },
+    });
+    expect(withColumn.header()).toEqual(['Date', 'File', 'Credits']);
+    expect(withColumn.rows()).toEqual([['d', 'x', '4']]);
+  });
+
+  it('reads a missing credits count as one, never as free', async () => {
+    const { rows } = await renderWide({
+      usages: [
+        { id: 1, filename: 'logo.svg', created_at: 'd' },
+      ] as unknown as UsageHistoryPageProps['usages'],
+      labels: { ...defaultLabels, columnCredits: 'Credits' },
+    });
+    expect(rows()).toEqual([['d', 'logo.svg', '1']]);
   });
 });

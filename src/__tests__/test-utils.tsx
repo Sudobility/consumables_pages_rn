@@ -171,3 +171,29 @@ export async function flushPromises(): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 0));
   });
 }
+
+/**
+ * Types into a controlled text field: sets the value the way a browser would,
+ * so React's `onChange` fires.
+ */
+export function changeText(element: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    'value'
+  )?.set;
+  reactAct(() => {
+    setter?.call(element, value);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+/**
+ * Presses a key on an element. The react-native mock answers Escape with what
+ * dismisses on a device: the hardware back button on a `Modal`, the screen
+ * reader's escape gesture on a view that handles it.
+ */
+export function pressKey(element: Element, key: string): void {
+  reactAct(() => {
+    element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  });
+}

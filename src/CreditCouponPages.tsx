@@ -5,6 +5,8 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import type {
   ConsumablesApiClient,
@@ -12,8 +14,11 @@ import type {
 } from '@sudobility/consumables_client';
 import { designTokens } from '@sudobility/design';
 
+import { useBreakpoints } from './breakpoints';
 import {
+  DISABLED_CLASS,
   FIELD_HEIGHT_CLASS,
+  cx,
   inputClass,
   primaryButtonClass,
   primaryButtonTextClass,
@@ -22,6 +27,51 @@ import {
 } from './controls';
 
 const { size, weight } = designTokens.typography;
+
+/*
+ * The web form leaves its validation to the browser: `required`, `type`,
+ * `min` and `step` on the inputs stop a submit before `createCreditCoupon` is
+ * ever called. React Native has no such form, so the same three rules are
+ * spelled out here and the button stays disabled until they hold.
+ */
+
+/** `<input type='number' min='1' step='1' required>`: a whole number, 1 or more. */
+function parseCredits(text: string): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const value = Number(trimmed);
+  return Number.isSafeInteger(value) && value >= 1 ? value : null;
+}
+
+const LOCAL_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/;
+
+/**
+ * `<input type='datetime-local' required>`: a real calendar date and time,
+ * read in the device's time zone as the browser reads its field.
+ *
+ * Parsed by hand rather than by `new Date(text)`: the typed form has a space
+ * where ISO 8601 has a `T`, and what an engine makes of that is its own
+ * business.
+ */
+function parseLocalDateTime(text: string): Date | null {
+  const match = LOCAL_DATE_TIME.exec(text.trim());
+  if (!match) return null;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  if (hour > 23 || minute > 59) return null;
+  const date = new Date(year, month - 1, day, hour, minute);
+  // A day the month does not have rolls over into the next one.
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  )
+    return null;
+  return date;
+}
+
+/** `<input type='email'>`: the pattern a browser holds an address to. */
+const EMAIL =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 export interface RedeemCreditCouponPageProps {
   client: ConsumablesApiClient;
@@ -37,9 +87,11 @@ export function RedeemCreditCouponPage({
   entityName,
   onRedeemed,
 }: RedeemCreditCouponPageProps) {
+  const { sm } = useBreakpoints();
   const [code, setCode] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const disabled = busy || code.length !== 8;
 
   async function submit() {
     setBusy(true);
@@ -64,23 +116,29 @@ export function RedeemCreditCouponPage({
     <View className='w-full max-w-4xl gap-6 self-center'>
       <View>
         <Text
-          className={[size['2xl'], weight.semibold, 'text-foreground'].join(
-            ' '
-          )}
+          className={cx(size['2xl'], weight.semibold, 'text-foreground')}
+          accessibilityRole='header'
         >
           Redeem a credit coupon
         </Text>
-        <Text className={['mt-1 text-muted-foreground', size.base].join(' ')}>
+        <Text className={cx(size.base, 'mt-1 text-muted-foreground')}>
           Credits are added to {entityName}.
         </Text>
       </View>
-      <View className='gap-3 rounded-lg border border-border p-5'>
+      {/* The web's `flex-col sm:flex-row`: field over button, or beside it. */}
+      <View
+        className={cx(
+          'gap-3 rounded-lg border border-border p-5',
+          sm && 'flex-row'
+        )}
+      >
         <TextInput
-          className={[
+          className={cx(
             inputClass(),
             FIELD_HEIGHT_CLASS,
-            'flex-1 font-mono uppercase',
-          ].join(' ')}
+            sm && 'flex-1',
+            'font-mono uppercase'
+          )}
           value={code}
           onChangeText={value =>
             setCode(
@@ -91,19 +149,20 @@ export function RedeemCreditCouponPage({
             )
           }
           placeholder='8-character code'
+          accessibilityLabel='8-character code'
           autoCapitalize='characters'
+          autoCorrect={false}
           maxLength={8}
         />
         <TouchableOpacity
           accessibilityRole='button'
-          className={[
+          accessibilityState={{ disabled, busy }}
+          className={cx(
             primaryButtonClass(),
             FIELD_HEIGHT_CLASS,
-            busy || code.length !== 8 ? 'opacity-50' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          disabled={busy || code.length !== 8}
+            disabled && DISABLED_CLASS
+          )}
+          disabled={disabled}
           onPress={() => void submit()}
         >
           <Text className={primaryButtonTextClass()}>
@@ -112,7 +171,10 @@ export function RedeemCreditCouponPage({
         </TouchableOpacity>
       </View>
       {message && (
-        <Text className='text-foreground' accessibilityRole='text'>
+        <Text
+          className={cx(size.base, 'text-foreground')}
+          accessibilityLiveRegion='polite'
+        >
           {message}
         </Text>
       )}
@@ -123,13 +185,20 @@ export function RedeemCreditCouponPage({
 export interface ManageCreditCouponsPageProps {
   client: ConsumablesApiClient;
   isAdmin: boolean;
+  /**
+   * Style for the scroll content, e.g. the host's safe-area scroll insets.
+   * React Native only: the web page scrolls with its document.
+   */
+  contentContainerStyle?: StyleProp<ViewStyle>;
 }
 
 /** Shared site-admin coupon creation, listing, detail, and redemption history. */
 export function ManageCreditCouponsPage({
   client,
   isAdmin,
+  contentContainerStyle,
 }: ManageCreditCouponsPageProps) {
+  const { sm } = useBreakpoints();
   const [coupons, setCoupons] = useState<CreditCoupon[]>([]);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [credits, setCredits] = useState('');
@@ -137,6 +206,13 @@ export function ManageCreditCouponsPage({
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const amount = parseCredits(credits);
+  const expiry = parseLocalDateTime(expiresAt);
+  const targetEmail = email.trim();
+  const emailValid = targetEmail === '' || EMAIL.test(targetEmail);
+  const createDisabled =
+    busy || amount === null || expiry === null || !emailValid;
 
   async function reload() {
     setCoupons(await client.listCreditCoupons());
@@ -161,13 +237,15 @@ export function ManageCreditCouponsPage({
   }, [isAdmin, client]);
 
   async function create() {
+    // An invalid form does not submit, on the web or here.
+    if (amount === null || expiry === null || !emailValid) return;
     setBusy(true);
     setError(null);
     try {
       const coupon = await client.createCreditCoupon({
-        credits: Number(credits),
-        expires_at: new Date(expiresAt).toISOString(),
-        email: email.trim() || null,
+        credits: amount,
+        expires_at: expiry.toISOString(),
+        email: targetEmail || null,
       });
       setSelectedCode(coupon.code);
       setCredits('');
@@ -189,79 +267,85 @@ export function ManageCreditCouponsPage({
     <ScrollView
       className='w-full max-w-4xl self-center'
       contentContainerClassName='gap-6 pb-6'
+      contentContainerStyle={contentContainerStyle}
+      keyboardShouldPersistTaps='handled'
     >
       <View>
         <Text
-          className={[size['2xl'], weight.semibold, 'text-foreground'].join(
-            ' '
-          )}
+          className={cx(size['2xl'], weight.semibold, 'text-foreground')}
+          accessibilityRole='header'
         >
           Manage Coupons
         </Text>
-        <Text className={['mt-1 text-muted-foreground', size.base].join(' ')}>
+        <Text className={cx(size.base, 'mt-1 text-muted-foreground')}>
           Create credit coupons and review redemption history.
         </Text>
       </View>
       {error && (
         <Text
           accessibilityRole='alert'
-          className={[size.sm, 'text-destructive'].join(' ')}
+          className={cx(size.sm, 'text-destructive')}
         >
           {error}
         </Text>
       )}
       <View className='rounded-lg border border-border p-5'>
         <Text
-          className={[size.lg, weight.semibold, 'text-foreground'].join(' ')}
+          className={cx(size.lg, weight.semibold, 'text-foreground')}
+          accessibilityRole='header'
         >
           Create a coupon
         </Text>
         <View className='mt-3 gap-3'>
-          <View>
-            <Text className={[size.sm, 'text-foreground'].join(' ')}>
-              Credits
-            </Text>
-            <TextInput
-              className={[inputClass(), FIELD_HEIGHT_CLASS, 'mt-1'].join(' ')}
-              keyboardType='numeric'
-              value={credits}
-              onChangeText={setCredits}
-            />
+          {/* The web's `sm:grid-cols-2`: the first two fields share a row. */}
+          <View className={cx('gap-3', sm && 'flex-row')}>
+            <View className={cx(sm && 'flex-1')}>
+              <Text className={cx(size.sm, 'text-foreground')}>Credits</Text>
+              <TextInput
+                className={cx(inputClass(), FIELD_HEIGHT_CLASS, 'mt-1')}
+                accessibilityLabel='Credits'
+                keyboardType='number-pad'
+                value={credits}
+                onChangeText={setCredits}
+              />
+            </View>
+            <View className={cx(sm && 'flex-1')}>
+              <Text className={cx(size.sm, 'text-foreground')}>Expires at</Text>
+              <TextInput
+                className={cx(inputClass(), FIELD_HEIGHT_CLASS, 'mt-1')}
+                accessibilityLabel='Expires at'
+                placeholder='YYYY-MM-DD HH:MM'
+                autoCapitalize='none'
+                autoCorrect={false}
+                value={expiresAt}
+                onChangeText={setExpiresAt}
+              />
+            </View>
           </View>
           <View>
-            <Text className={[size.sm, 'text-foreground'].join(' ')}>
-              Expires at
-            </Text>
-            <TextInput
-              className={[inputClass(), FIELD_HEIGHT_CLASS, 'mt-1'].join(' ')}
-              placeholder='YYYY-MM-DD HH:MM'
-              value={expiresAt}
-              onChangeText={setExpiresAt}
-            />
-          </View>
-          <View>
-            <Text className={[size.sm, 'text-foreground'].join(' ')}>
+            <Text className={cx(size.sm, 'text-foreground')}>
               Restrict to user email (optional)
             </Text>
             <TextInput
-              className={[inputClass(), FIELD_HEIGHT_CLASS, 'mt-1'].join(' ')}
+              className={cx(inputClass(), FIELD_HEIGHT_CLASS, 'mt-1')}
+              accessibilityLabel='Restrict to user email (optional)'
               keyboardType='email-address'
               autoCapitalize='none'
+              autoCorrect={false}
               value={email}
               onChangeText={setEmail}
             />
           </View>
           <TouchableOpacity
             accessibilityRole='button'
-            className={[
+            accessibilityState={{ disabled: createDisabled, busy }}
+            className={cx(
               primaryButtonClass(),
               FIELD_HEIGHT_CLASS,
               'self-start',
-              busy ? 'opacity-50' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            disabled={busy}
+              createDisabled && DISABLED_CLASS
+            )}
+            disabled={createDisabled}
             onPress={() => void create()}
           >
             <Text className={primaryButtonTextClass()}>
@@ -272,27 +356,33 @@ export function ManageCreditCouponsPage({
       </View>
       <View className='rounded-lg border border-border p-5'>
         <Text
-          className={[size.lg, weight.semibold, 'text-foreground'].join(' ')}
+          className={cx(size.lg, weight.semibold, 'text-foreground')}
+          accessibilityRole='header'
         >
           Coupons
         </Text>
         {coupons.length ? (
           <View className='mt-3'>
-            {coupons.map(coupon => (
+            {coupons.map((coupon, index) => (
               <TouchableOpacity
                 key={coupon.code}
                 accessibilityRole='button'
-                className='flex-row items-center justify-between gap-3 border-b border-border py-3'
+                className={cx(
+                  'flex-row items-center justify-between gap-3 py-3',
+                  index > 0 && 'border-t border-border'
+                )}
                 onPress={() => setSelectedCode(coupon.code)}
               >
                 <Text
-                  className={['font-mono text-foreground', weight.medium].join(
-                    ' '
+                  className={cx(
+                    size.base,
+                    weight.medium,
+                    'font-mono text-foreground'
                   )}
                 >
                   {coupon.code}
                 </Text>
-                <Text className={[size.sm, 'text-muted-foreground'].join(' ')}>
+                <Text className={cx(size.sm, 'text-muted-foreground')}>
                   {coupon.credits} credits ·{' '}
                   {new Date(coupon.createdAt).toLocaleString()}
                 </Text>
@@ -300,7 +390,7 @@ export function ManageCreditCouponsPage({
             ))}
           </View>
         ) : (
-          <Text className={[size.sm, 'mt-3 text-muted-foreground'].join(' ')}>
+          <Text className={cx(size.sm, 'mt-3 text-muted-foreground')}>
             No coupons created yet.
           </Text>
         )}
@@ -308,17 +398,18 @@ export function ManageCreditCouponsPage({
       {selected && (
         <View className='rounded-lg border border-border p-5'>
           <View className='flex-row items-start justify-between gap-3'>
-            <View>
+            <View className='flex-1'>
               <Text
-                className={[
+                className={cx(
                   size.xl,
                   weight.semibold,
-                  'font-mono text-foreground',
-                ].join(' ')}
+                  'font-mono text-foreground'
+                )}
+                accessibilityRole='header'
               >
                 {selected.code}
               </Text>
-              <Text className={[size.sm, 'text-muted-foreground'].join(' ')}>
+              <Text className={cx(size.sm, 'text-muted-foreground')}>
                 Coupon details
               </Text>
             </View>
@@ -330,22 +421,32 @@ export function ManageCreditCouponsPage({
               <Text className={quietButtonTextClass()}>Back to coupons</Text>
             </TouchableOpacity>
           </View>
-          <View className='mt-4 gap-3'>
-            <Detail label='Credits' value={String(selected.credits)} />
+          {/* The web's `grid gap-3 sm:grid-cols-2`. */}
+          <View className={cx('mt-4 gap-3', sm && 'flex-row flex-wrap')}>
             <Detail
+              wide={sm}
+              label='Credits'
+              value={String(selected.credits)}
+            />
+            <Detail
+              wide={sm}
               label='Created'
               value={new Date(selected.createdAt).toLocaleString()}
             />
             <Detail
+              wide={sm}
               label='Expires'
               value={new Date(selected.expiresAt).toLocaleString()}
             />
-            <Detail label='Target email' value={selected.email || 'Any user'} />
+            <Detail
+              wide={sm}
+              label='Target email'
+              value={selected.email || 'Any user'}
+            />
           </View>
           <Text
-            className={[size.lg, weight.semibold, 'mt-6 text-foreground'].join(
-              ' '
-            )}
+            className={cx(size.lg, weight.semibold, 'mt-6 text-foreground')}
+            accessibilityRole='header'
           >
             Redemption history
           </Text>
@@ -354,23 +455,24 @@ export function ManageCreditCouponsPage({
               {selected.history.map((item, index) => (
                 <View
                   key={`${item.entityId ?? 'scope'}-${item.redeemedAt}-${index}`}
-                  className='flex-row flex-wrap justify-between gap-2 border-b border-border py-2'
+                  className={cx(
+                    'flex-row flex-wrap justify-between gap-2 py-2',
+                    index > 0 && 'border-t border-border'
+                  )}
                 >
-                  <Text className={[size.sm, 'text-foreground'].join(' ')}>
+                  <Text className={cx(size.sm, 'text-foreground')}>
                     {item.entityId ? `Workspace ${item.entityId}` : ''}
                     {item.userId ? ` · ${item.userId}` : ''} · {item.credits}{' '}
                     credits
                   </Text>
-                  <Text
-                    className={[size.sm, 'text-muted-foreground'].join(' ')}
-                  >
+                  <Text className={cx(size.sm, 'text-foreground')}>
                     {new Date(item.redeemedAt).toLocaleString()}
                   </Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text className={[size.sm, 'mt-2 text-muted-foreground'].join(' ')}>
+            <Text className={cx(size.sm, 'mt-2 text-muted-foreground')}>
               No redemptions yet.
             </Text>
           )}
@@ -380,13 +482,20 @@ export function ManageCreditCouponsPage({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({
+  label,
+  value,
+  wide,
+}: {
+  label: string;
+  value: string;
+  /** Two to a row, as the web's grid lays them from `sm` up. */
+  wide: boolean;
+}) {
   return (
-    <View>
-      <Text className={[size.sm, 'text-muted-foreground'].join(' ')}>
-        {label}
-      </Text>
-      <Text className='text-foreground'>{value}</Text>
+    <View className={cx(wide && 'w-[48%]')}>
+      <Text className={cx(size.sm, 'text-muted-foreground')}>{label}</Text>
+      <Text className={cx(size.base, 'text-foreground')}>{value}</Text>
     </View>
   );
 }
